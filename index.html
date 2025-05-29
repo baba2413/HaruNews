@@ -4,13 +4,19 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>하루뉴스 - 5분 뉴스</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
     <div id="app">
         <!-- 초기 설정 화면 -->
         <div id="setup-screen" class="screen">
-            <h1>하루뉴스</h1>
+            <div class="logo-container">
+                <h1>하루뉴스</h1>
+                <p class="subtitle">하루 5분, 당신을 위한 뉴스</p>
+            </div>
             <div class="setup-form">
                 <div class="form-group">
                     <label for="age-group">연령대</label>
@@ -39,8 +45,17 @@
 
         <!-- 메인 뉴스 화면 -->
         <div id="main-screen" class="screen hidden">
-            <header>
-                <h1>하루뉴스</h1>
+            <header class="main-header">
+                <div class="header-content">
+                    <div class="logo-container">
+                        <h1>하루뉴스</h1>
+                        <p class="subtitle">하루 5분, 당신을 위한 뉴스</p>
+                    </div>
+                    <div class="user-info">
+                        <span class="user-age"></span>
+                        <span class="user-interests"></span>
+                    </div>
+                </div>
                 <div class="category-tabs">
                     <button class="category-btn active" data-category="all">전체</button>
                     <button class="category-btn" data-category="politics">정치</button>
