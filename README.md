@@ -26,9 +26,21 @@
 ## 시작하기
 
 1. 프로젝트 클론
-2. `index.html` 파일을 웹 브라우저에서 열기
+2. `.env` 파일 생성 및 API 키 설정
+   ```
+   # OpenAI API Key
+   OPENAI_API_KEY=your_openai_api_key_here
+
+   # Naver API Keys
+   NAVER_CLIENT_ID=your_naver_client_id_here
+   NAVER_CLIENT_SECRET=your_naver_client_secret_here
+   ```
+3. `npm install` 실행하여 의존성 설치
+4. `npm start` 실행하여 서버 시작
+5. `index.html` 파일을 웹 브라우저에서 열기
 
 ## 주의사항
 
 - API 키가 필요합니다 (네이버 뉴스 API, OpenAI API)
-- API 키는 별도로 관리해야 합니다 
+- API 키는 `.env` 파일에 설정해야 합니다
+- `.env` 파일은 절대로 git에 커밋하지 마세요 
