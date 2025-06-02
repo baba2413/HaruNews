@@ -37,7 +37,7 @@
    ```
 3. `npm install` 실행하여 의존성 설치
 4. `npm start` 실행하여 서버 시작
-5. localhost 접속
+5. `index.html` 파일을 웹 브라우저에서 열기
 
 ## 주의사항
 
