@@ -97,12 +97,36 @@ function handleStart() {
 }
 
 // 카테고리 변경 처리
-function handleCategoryChange(category) {
+async function handleCategoryChange(category) {
     state.currentCategory = category;
     elements.categoryBtns.forEach(btn => {
         btn.classList.toggle('active', btn.dataset.category === category);
     });
-    loadNews();
+    if (category === 'recommend') {
+        try {
+            const news = await fetchNews('all');
+            const sortedNews = sortNewsByReadSimilarity(news);
+
+            // 디버깅용 파트: 헤드라인, 유사도 출력
+            const top3 = sortedNews.slice(0, 5);
+            top3.forEach(item => {
+                const readList = getReadHeadlines();
+                let maxSim = 0;
+                readList.forEach(readTitle => {
+                    const sim = jaccardSimilarity(readTitle, item.title);
+                    if (sim > maxSim) maxSim = sim;
+                });
+                console.log(`헤드라인: ${item.title} 유사도: ${maxSim.toFixed(2)}`);
+            });
+
+            displayNews(sortedNews);
+        } catch (error) {
+            console.error('추천 뉴스 로드 실패:', error);
+            alert('추천 뉴스를 불러오는데 실패했습니다. 잠시 후 다시 시도해주세요.');
+        }
+    } else {
+        loadNews();
+    }
 }
 
 // 뉴스 로드
@@ -237,8 +261,43 @@ function createNewsCard(news) {
             <span>${news.publishedAt}</span>
         </div>
     `;
-    card.addEventListener('click', () => showNewsDetail(news));
+    // 세션 저장소에 헤드라인 저장
+    card.addEventListener('click', () => {
+        saveReadHeadline(news.title);
+        showAllReadHeadlinesToConsole();
+        showNewsDetail(news);
+    });
     return card;
+}
+
+// 세션 저장소에 저장된 모든 기사 헤드라인을 콘솔에 출력
+function showAllReadHeadlinesToConsole() {
+    const arr = getReadHeadlines();
+    console.log('--- 현재 세션에 저장된 읽은 기사 헤드라인 ---');
+    arr.forEach((headline, idx) => {
+        console.log(`${idx + 1}. ${headline}`);
+    });
+    console.log('-----------------------------------------');
+}
+
+// 세션저장소에서 readHeadlines 배열 추출
+function getReadHeadlines() {
+    const stored = sessionStorage.getItem('readHeadlines');
+    try {
+        return stored ? JSON.parse(stored) : [];
+    } catch {
+        return [];
+    }
+}
+
+// 세션 저장소에 읽은 기사 헤드라인 저장
+function saveReadHeadline(title) {
+    const arr = getReadHeadlines();
+    // 중복 저장 방지
+    if (!arr.includes(title)) {
+        arr.push(title);
+        sessionStorage.setItem('readHeadlines', JSON.stringify(arr));
+    }
 }
 
 // 뉴스 상세 보기
@@ -392,6 +451,53 @@ async function askGPT(type, question, text) { // type, question, text 인자 추
         console.error('GPT API 호출 실패:', error);
         throw error; // 에러를 다시 던져서 handleGPT에서 잡도록 함
     }
+}
+
+// 헤드라인 텍스트 cleaning
+function makeWordSet(text) {
+    return new Set(
+        text
+            .toLowerCase()
+            .replace(/[^a-z0-9가-힣\s]/gi, ' ')
+            .split(/\s+/)
+            .filter(w => w.length > 0)
+    );
+}
+
+// 유사도 계산
+function jaccardSimilarity(a, b) {
+    const setA = makeWordSet(a);
+    const setB = makeWordSet(b);
+
+    if (setA.size === 0 || setB.size === 0) return 0;
+
+    let intersectionSize = 0;
+    setA.forEach(word => {
+        if (setB.has(word)) intersectionSize++;
+    });
+
+    const unionSize = new Set([...setA, ...setB]).size;
+    return unionSize === 0 ? 0 : intersectionSize / unionSize;
+}
+
+// 헤드라인 간 유사도 비교
+function sortNewsByReadSimilarity(newsItems) {
+    const readList = getReadHeadlines();
+    if (readList.length === 0) {
+        return newsItems;
+    }
+
+    const withScore = newsItems.map(item => {
+        let maxSim = 0;
+        readList.forEach(readTitle => {
+            const sim = jaccardSimilarity(readTitle, item.title);
+            if (sim > maxSim) maxSim = sim;
+        });
+        return { item, score: maxSim };
+    });
+
+    withScore.sort((a, b) => b.score - a.score);
+    return withScore.map(obj => obj.item);
 }
 
 // 사이드바 표시
