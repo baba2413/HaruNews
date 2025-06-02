@@ -13,10 +13,19 @@
     <div id="app">
         <!-- 초기 설정 화면 -->
         <div id="setup-screen" class="screen">
+            <div class="darkmode-toggle">
+                <span id="darkmode-icon">🌙</span>
+                <label class="switch">
+                    <input type="checkbox" id="darkmode-toggle">
+                    <span class="slider round"></span>
+                </label>
+            </div>
+
             <div class="logo-container">
                 <h1>하루뉴스</h1>
                 <p class="subtitle">하루 5분, 당신을 위한 뉴스</p>
             </div>
+            
             <div class="setup-form">
                 <div class="form-group">
                     <label for="age-group">연령대</label>
@@ -81,11 +90,11 @@
                 </div>
             </div>
             <div class="detail-content">
-                <div class="news-content">
-                    <!-- 뉴스 상세 내용이 여기에 표시됩니다 -->
-                </div>
                 <div id="sidebar" class="hidden">
                     <!-- 위키피디아 검색 결과나 GPT 응답이 여기에 표시됩니다 -->
+                </div>
+                <div class="news-content">
+                    <!-- 뉴스 상세 내용이 여기에 표시됩니다 -->
                 </div>
             </div>
         </div>
