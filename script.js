@@ -81,7 +81,8 @@ function handleStart() {
             society: '사회',
             sports: '스포츠',
             entertainment: '연예',
-            tech: 'IT/과학'
+            tech: 'IT/과학',
+            location: '위치기반'
         };
         return labels[interest];
     }).join(', ');
@@ -102,7 +103,12 @@ function handleCategoryChange(category) {
     elements.categoryBtns.forEach(btn => {
         btn.classList.toggle('active', btn.dataset.category === category);
     });
-    loadNews();
+
+      if (category === 'location') {
+        loadLocationNews(); // 위치기반 로직 분리
+    } else {
+        loadNews();
+    }
 }
 
 // 뉴스 로드
@@ -280,6 +286,8 @@ async function showNewsDetail(news) {
             try {
                 // GPT API로 본문 요약 요청
                 const summary = await askGPT('summarize', null, result.content);
+
+                state.currentNews.summary = summary;
                 
                 // 요약 결과 표시
                 newsBody.innerHTML = `
@@ -330,15 +338,107 @@ async function showNewsDetail(news) {
     }
 }
 
-// TTS 처리
-function handleTTS() {
-    if (!state.currentNews) return;
-    
-    const text = state.currentNews.content;
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = 'ko-KR';
-    speechSynthesis.speak(utterance);
+
+async function getCityNameFromCoords(lat, lng) {
+    try {
+        const response = await fetch(`/api/geocode?lat=${lat}&lng=${lng}`);
+        const data = await response.json();
+
+        if (data.success && data.address) {
+            return data.address.split(' ').find(part => part.endsWith('시') || part.endsWith('군')) || data.address;
+
+        } else {
+            return null;
+        }
+    } catch (error) {
+        console.error('주소 변환 실패:', error);
+        return null;
+    }
 }
+
+
+function getCurrentCoordinates() {
+    return new Promise((resolve, reject) => {
+        if (!navigator.geolocation) {
+            reject(new Error('위치정보를 지원하지 않습니다.'));
+        } else {
+            navigator.geolocation.getCurrentPosition(
+                pos => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+                err => reject(err)
+            );
+        }
+    });
+}
+
+
+async function loadLocationNews() {
+    try {
+        const coords = await getCurrentCoordinates(); // GPS
+        const city = await getCityNameFromCoords(coords.lat, coords.lng); // 주소 변환
+        if (!city) throw new Error('도시명 추출 실패');
+
+        const news = await fetchNews(city); // 기존 함수 사용
+        displayNews(news);
+    } catch (err) {
+        console.error('위치기반 뉴스 실패:', err);
+        alert('위치 기반 뉴스를 불러오는 데 실패했습니다.');
+    }
+}
+
+
+function getBrightnessByTime() {
+    const hour = new Date().getHours();
+    return (hour >= 6 && hour < 18) ? 'light' : 'dark';
+}
+
+
+// TTS 처리
+async function handleTTS() {
+    if (!state.currentNews) return;
+
+    const brightness = getBrightnessByTime();
+    const text = state.currentNews.summary || state.currentNews.description;
+
+    if (!text) {
+        alert('읽을 텍스트가 없습니다.');
+        return;
+    }
+
+    try {
+        const response = await fetch('http://localhost:3000/api/tts', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text, brightness })
+        });
+
+        const data = await response.json();
+
+        console.log('[🔊 TTS 응답]', data);
+
+        if (!data.success) {
+            throw new Error(data.error || 'TTS 처리 실패');
+        }
+
+        if (!data.audioContent || typeof data.audioContent !== 'string') {
+            throw new Error('audioContent 형식이 잘못되었거나 비어있음');
+        }
+
+        // Base64 → Audio 객체 재생
+        const audioSrc = `data:audio/mp3;base64,${data.audioContent}`;
+        const audio = new Audio(audioSrc);
+        audio.play().catch(err => {
+            console.error('오디오 재생 오류:', err);
+            alert('음성 재생에 실패했습니다.');
+        });
+
+    } catch (error) {
+        console.error('TTS 처리 중 오류:', error);
+        alert('음성을 생성하는 데 실패했습니다.');
+    }
+}
+
+
+
 
 // GPT 질문 처리
 async function handleGPT() {
@@ -393,6 +493,7 @@ async function askGPT(type, question, text) { // type, question, text 인자 추
         throw error; // 에러를 다시 던져서 handleGPT에서 잡도록 함
     }
 }
+
 
 // 사이드바 표시
 function showSidebar(content) {

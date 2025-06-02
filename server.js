@@ -49,7 +49,7 @@ app.get('/api/news', async (req, res) => {
             tech: 'IT 과학'
         };
 
-        const keyword = categoryKeywords[category] || '';
+        const keyword = categoryKeywords[category] || category || '';
         const query = encodeURIComponent(keyword);
         
         const response = await fetch(
@@ -138,6 +138,76 @@ app.post('/api/gpt', async (req, res) => {
         res.status(500).json({ error: 'GPT API 호출 중 오류가 발생했습니다.' });
     }
 });
+
+// GOOGLE MAP API 엔드포인트
+app.get('/api/geocode', async (req, res) => {
+    const { lat, lng } = req.query;
+
+    if (!lat || !lng) {
+        return res.status(400).json({ error: '좌표가 필요합니다.' });
+    }
+
+    const key = process.env.GOOGLE_MAPS_KEY;
+    const url = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${key}&language=ko`;
+
+    try {
+        const response = await fetch(url);
+        const data = await response.json();
+
+        if (!data || !data.results || data.results.length === 0) {
+            return res.status(404).json({ error: '주소를 찾을 수 없습니다.' });
+        }
+
+        res.json({ success: true, address: data.results[0].formatted_address });
+
+    } catch (error) {
+        console.error('Geocode API 호출 실패:', error);
+        res.status(500).json({ error: '주소 변환에 실패했습니다.' });
+    }
+});
+
+const textToSpeech = require('@google-cloud/text-to-speech');
+const fs = require('fs');
+const util = require('util');
+const client = new textToSpeech.TextToSpeechClient();
+
+// server.js > /api/tts 엔드포인트
+app.post('/api/tts', async (req, res) => {
+    const { text, brightness } = req.body;
+
+    if (!text) {
+        return res.status(400).json({ success: false, error: '텍스트가 필요합니다.' });
+    }
+
+    const voiceName = brightness === 'dark' ? 'ko-KR-Chirp3-HD-Kore' : 'ko-KR-Chirp3-HD-Leda';
+
+    const request = {
+        input: { text },
+        voice: {
+            languageCode: 'ko-KR',
+            name: voiceName
+        },
+        audioConfig: {
+            audioEncoding: 'MP3',
+            speakingRate: brightness === 'dark' ? 1.3 : 1.1
+        },
+    };
+
+    try {
+        const [response] = await client.synthesizeSpeech(request);
+
+        const base64Audio = response.audioContent.toString('base64'); // Base64로 변환
+
+        console.log('🔊 audioContent 길이:', base64Audio.length);
+
+        res.json({ success: true, audioContent: base64Audio }); // 변환된 문자열 반환
+    } catch (err) {
+        console.error('TTS 오류:', err.response?.data || err.message || err);
+        res.status(500).json({ success: false, error: 'TTS 생성 실패' });
+    }
+});
+
+
 
 app.listen(port, () => {
     console.log(`Server running at http://localhost:${port}`);
