@@ -108,7 +108,7 @@ async function handleCategoryChange(category) {
             const sortedNews = sortNewsByReadSimilarity(news);
 
             // 디버깅용 파트: 헤드라인, 유사도 출력
-            const top3 = sortedNews.slice(0, 5);
+            const top3 = sortedNews.slice(0, );
             top3.forEach(item => {
                 const readList = getReadHeadlines();
                 let maxSim = 0;
