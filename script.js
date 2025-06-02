@@ -21,7 +21,9 @@ const elements = {
     backBtn: document.getElementById('back-btn'),
     ttsBtn: document.getElementById('tts-btn'),
     gptBtn: document.getElementById('gpt-btn'),
-    sidebar: document.getElementById('sidebar')
+    sidebar: document.getElementById('sidebar'),
+    darkToggle: document.getElementById('darkmode-toggle'), 
+    darkIcon: document.getElementById('darkmode-icon')   
 };
 
 // 네이버 뉴스 API 관련 상수
@@ -42,6 +44,8 @@ function setupEventListeners() {
 
     // 뒤로가기 버튼
     elements.backBtn.addEventListener('click', () => {
+        const existing = document.querySelector('.gpt-response');
+        if (existing) existing.remove();
         elements.detailScreen.classList.add('hidden');
         elements.mainScreen.classList.remove('hidden');
     });
@@ -51,6 +55,13 @@ function setupEventListeners() {
 
     // GPT 버튼
     elements.gptBtn.addEventListener('click', handleGPT);
+
+    // 다크 모드 토글
+    elements.darkToggle.addEventListener('change', () => {
+        document.body.classList.toggle('dark-mode', elements.darkToggle.checked);
+        elements.darkIcon.textContent = elements.darkToggle.checked ? '🔆' : '🌙';
+        elements.darkIcon.style.transform = elements.darkToggle.checked ? 'translateY(1px)' : 'translateY(0)'
+    });
 }
 
 // 시작하기 처리
@@ -148,12 +159,12 @@ async function fetchNews(category) {
             title: item.title.replace(/<[^>]*>/g, ''), // HTML 태그 제거
             description: item.description.replace(/<[^>]*>/g, ''),
             link: item.link,
-            publisher: item.publisher,
+            publisher: new URL(item.originallink || item.link).hostname.replace('www.', ''),
             publishedAt: formatDate(item.pubDate),
             content: item.description.replace(/<[^>]*>/g, '') // 상세 내용은 description으로 대체
         }));
     } catch (error) {
-        console.error('뉴스를 가져오는데 실패했습니다:', error);
+        console.error('뉴스를 가져오는 데 실패했습니다:', error);
         // 데모 데이터 반환
         return getDemoNews(category);
     }
@@ -251,16 +262,15 @@ async function showNewsDetail(news) {
         
         const content = document.querySelector('.news-content');
         content.innerHTML = `
-            <h2>${news.title}</h2>
-            <div class="news-meta">
-                <span>${news.publisher}</span>
-                <span>${news.publishedAt}</span>
-                <div class="news-links">
-                    <a href="${news.link}" target="_blank">원문 링크</a>
-                </div>
-            </div>
+            <h2 style="margin-top: 16px;">${news.title}</h2>
+            <p class="news-meta">
+                ${news.publishedAt}
+                <a class="original-link" href="${news.link}" target="_blank">원문 링크</a>
+                <br>
+                ${news.publisher}
+            </p>
             <div class="news-body">
-                // <p>${news.description}</p>
+                
                 <div class="loading">본문을 불러오는 중...</div>
             </div>
         `;
@@ -292,21 +302,24 @@ async function showNewsDetail(news) {
                 originalSection.className = 'original-content-section';
                 originalSection.innerHTML = `
                     <div class="full-crawled-content" style="display: none;">
-                        <h4>원문 전체 내용</h4>
+                        <h4>원문 내용</h4>
                         <p>${result.content}</p>
                     </div>
-                    <button class="toggle-full-content">원문 전체 내용 보기/숨기기</button>
+                    <button>원문 보기</button>
                 `;
+
+                const summaryContent = content.querySelector('.summary-content');
+                if (summaryContent) summaryContent.style.marginBottom = '24px';
                 newsBody.appendChild(originalSection);
 
                 // 원문 전체 내용 토글 기능 추가
-                const toggleButton = originalSection.querySelector('.toggle-full-content');
+                const toggleButton = originalSection.querySelector('button');
                 const fullContentDiv = originalSection.querySelector('.full-crawled-content');
 
                 toggleButton.addEventListener('click', () => {
                     const isHidden = fullContentDiv.style.display === 'none';
                     fullContentDiv.style.display = isHidden ? 'block' : 'none';
-                    toggleButton.textContent = isHidden ? '원문 전체 내용 숨기기' : '원문 전체 내용 보기/숨기기';
+                    toggleButton.textContent = isHidden ? '원문 숨기기' : '원문 보기';
                 });
 
             } catch (gptError) {
@@ -360,6 +373,39 @@ async function handleGPT() {
         alert('질문에 대한 응답을 받는데 실패했습니다. 잠시 후 다시 시도해주세요.');
     }
 }
+/*
+async function handleGPT() {
+    if (!state.currentNews) return;
+    
+    const question = prompt('뉴스에 대해 궁금한 점을 입력해주세요:');
+    if (!question) return;
+
+    try {
+        // 이미 존재하는 이전 응답 지우기
+        const existing = document.querySelector('.gpt-response');
+        if (existing) existing.remove();
+
+        // GPT API 호출
+        const response = await askGPT('qa', question, state.currentNews.content);
+        
+        // 응답을 GPT 질문 버튼 바로 아래에 삽입
+        const responseDiv = document.createElement('div');
+        responseDiv.className = 'gpt-response';
+        responseDiv.textContent = response;
+        elements.gptBtn.insertAdjacentElement('afterend', responseDiv);
+
+    } catch (error) {
+        console.error('GPT 응답을 받는 데 실패했습니다:', error);
+        // 실패 시에도 기존 응답 지우고 에러 메시지 표시
+        const existing = document.querySelector('.gpt-response');
+        if (existing) existing.remove();
+        const errorDiv = document.createElement('div');
+        errorDiv.className = 'gpt-response error-message';
+        errorDiv.textContent = '질문에 대한 응답을 받는 데 실패했습니다. 잠시 후 다시 시도해주세요.';
+        elements.gptBtn.insertAdjacentElement('afterend', errorDiv);
+    }
+}
+*/
 
 // GPT API 호출
 async function askGPT(type, question, text) { // type, question, text 인자 추가
