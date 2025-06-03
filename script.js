@@ -24,7 +24,8 @@ const elements = {
     gptBtn: document.getElementById('gpt-btn'),
     sidebar: document.getElementById('sidebar'),
     darkToggle: document.getElementById('darkmode-toggle'), 
-    darkIcon: document.getElementById('darkmode-icon')   
+    darkIcon: document.getElementById('darkmode-icon'),
+    logos: document.querySelectorAll('.logo-container h1')   // 모든 로고 요소 선택
 };
 
 // 네이버 뉴스 API 관련 상수
@@ -37,6 +38,26 @@ const NAVER_NEWS_API = {
 function setupEventListeners() {
     // 시작하기 버튼
     elements.startBtn.addEventListener('click', handleStart);
+
+    // 로고 클릭 이벤트 (모든 로고에 적용)
+    elements.logos.forEach(logo => {
+        logo.addEventListener('click', () => {
+            // 현재 재생 중인 오디오가 있다면 중지
+            if (state.currentAudio) {
+                state.currentAudio.pause();
+                state.currentAudio = null;
+                elements.ttsBtn.textContent = '🔊 TTS';
+            }
+            
+            // 모든 화면 숨기기
+            elements.mainScreen.classList.add('hidden');
+            elements.detailScreen.classList.add('hidden');
+            elements.sidebar.classList.add('hidden');
+            
+            // 설정 화면 표시
+            elements.setupScreen.classList.remove('hidden');
+        });
+    });
 
     // 카테고리 버튼들
     elements.categoryBtns.forEach(btn => {
@@ -81,23 +102,23 @@ function handleStart() {
     elements.setupScreen.classList.add('hidden');
     elements.mainScreen.classList.remove('hidden');
     
-    // 사용자 정보 표시
-    const userAge = document.querySelector('.user-age');
-    const userInterests = document.querySelector('.user-interests');
+    // // 사용자 정보 표시
+    // const userAge = document.querySelector('.user-age');
+    // const userInterests = document.querySelector('.user-interests');
     
-    userAge.textContent = `${ageGroup}대`;
-    userInterests.textContent = interests.map(interest => {
-        const labels = {
-            politics: '정치',
-            economy: '경제',
-            society: '사회',
-            sports: '스포츠',
-            entertainment: '연예',
-            tech: 'IT/과학',
-            location: '위치기반'
-        };
-        return labels[interest];
-    }).join(', ');
+    // userAge.textContent = `${ageGroup}대`;
+    // userInterests.textContent = interests.map(interest => {
+    //     const labels = {
+    //         politics: '정치',
+    //         economy: '경제',
+    //         society: '사회',
+    //         sports: '스포츠',
+    //         entertainment: '연예',
+    //         tech: 'IT/과학',
+    //         location: '위치기반'
+    //     };
+    //     return labels[interest];
+    // }).join(', ');
     
     // 선택된 관심사 중 첫 번째를 기본 카테고리로 설정 및 로드
     if (interests.length > 0) {
@@ -138,11 +159,8 @@ async function handleCategoryChange(category) {
             console.error('추천 뉴스 로드 실패:', error);
             alert('추천 뉴스를 불러오는데 실패했습니다. 잠시 후 다시 시도해주세요.');
         }
-
-
-      if (category === 'location') {
+    } else if (category === 'location') {
         loadLocationNews(); // 위치기반 로직 분리
-
     } else {
         loadNews();
     }
@@ -475,7 +493,8 @@ async function handleTTS() {
     if (state.currentAudio) {
         state.currentAudio.pause();
         state.currentAudio = null;
-        elements.ttsBtn.textContent = '🔊 TTS';  // 버튼 텍스트 원래대로
+        elements.ttsBtn.textContent = '🔊 TTS';
+        elements.ttsBtn.classList.remove('loading');
         return;
     }
 
@@ -488,6 +507,11 @@ async function handleTTS() {
     }
 
     try {
+        // TTS 생성 중 상태 표시
+        elements.ttsBtn.textContent = '⏳ 준비 중...';
+        elements.ttsBtn.classList.add('loading');
+        elements.ttsBtn.disabled = true;
+
         const response = await fetch('http://localhost:3000/api/tts', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -514,22 +538,30 @@ async function handleTTS() {
         audio.onended = () => {
             state.currentAudio = null;
             elements.ttsBtn.textContent = '🔊 TTS';
+            elements.ttsBtn.classList.remove('loading');
+            elements.ttsBtn.disabled = false;
         };
 
         // 오디오 재생 중 에러 발생 시 상태 초기화
         audio.onerror = () => {
             state.currentAudio = null;
             elements.ttsBtn.textContent = '🔊 TTS';
+            elements.ttsBtn.classList.remove('loading');
+            elements.ttsBtn.disabled = false;
             alert('음성 재생에 실패했습니다.');
         };
 
         state.currentAudio = audio;  // 현재 재생 중인 오디오 저장
         elements.ttsBtn.textContent = '⏹️ 중지';  // 버튼 텍스트 변경
+        elements.ttsBtn.classList.remove('loading');
+        elements.ttsBtn.disabled = false;
         audio.play().catch(err => {
             console.error('오디오 재생 오류:', err);
             alert('음성 재생에 실패했습니다.');
             state.currentAudio = null;
             elements.ttsBtn.textContent = '🔊 TTS';
+            elements.ttsBtn.classList.remove('loading');
+            elements.ttsBtn.disabled = false;
         });
 
     } catch (error) {
@@ -537,6 +569,8 @@ async function handleTTS() {
         alert('음성을 생성하는 데 실패했습니다.');
         state.currentAudio = null;
         elements.ttsBtn.textContent = '🔊 TTS';
+        elements.ttsBtn.classList.remove('loading');
+        elements.ttsBtn.disabled = false;
     }
 }
 
@@ -604,11 +638,21 @@ voiceBtn.addEventListener("click", () => {
     recognition.lang = 'ko-KR';
     recognition.interimResults = false;
 
+    // 음성 인식 시작 시 버튼 상태 변경
+    voiceBtn.classList.add('listening');
+    voiceBtn.innerHTML = '🎤 듣는 중...';
+    voiceBtn.disabled = true;
+
     recognition.start();
 
     recognition.onresult = async (event) => {
         const voiceQuestion = event.results[0][0].transcript;
         console.log("음성 질문:", voiceQuestion);
+
+        // 음성 인식 완료 후 버튼 상태 복구
+        voiceBtn.classList.remove('listening');
+        voiceBtn.innerHTML = '🎤 음성 질문';
+        voiceBtn.disabled = false;
 
         const summary = document.querySelector('.summary-content')?.innerText;
         if (!summary) {
@@ -616,7 +660,9 @@ voiceBtn.addEventListener("click", () => {
             return;
         }
 
-        const fullPrompt = `다음은 뉴스 요약입니다:\n${summary}\n\n사용자의 질문:\n${voiceQuestion}\n\n이 뉴스 내용을 바탕으로 질문에 답변해 주세요.`;
+        // // 뉴스 관련 질문하라고 답변 안 할 때가 있음
+        // const fullPrompt = `다음은 뉴스 요약입니다:\n${summary}\n\n사용자의 질문:\n${voiceQuestion}\n\n이 뉴스 내용을 바탕으로 질문에 답변해 주세요.`;
+        const fullPrompt = `요청의 내용이 질문 형식이라면 질문에 대답한다.\n요청의 내용이 단어 형태라면 단어에 대한 개념을 설명한다.\n모두 아니라면 요령껏 대답한다.\n\n요청: ${voiceQuestion}`;
 
         const response = await fetch('/api/ask-gpt', {
             method: 'POST',
@@ -631,6 +677,17 @@ voiceBtn.addEventListener("click", () => {
     recognition.onerror = (event) => {
         console.error("음성 인식 오류:", event.error);
         alert("음성 인식에 실패했습니다.");
+        // 에러 발생 시에도 버튼 상태 복구
+        voiceBtn.classList.remove('listening');
+        voiceBtn.innerHTML = '🎤 음성 질문';
+        voiceBtn.disabled = false;
+    };
+
+    recognition.onend = () => {
+        // 음성 인식이 종료될 때 버튼 상태 복구
+        voiceBtn.classList.remove('listening');
+        voiceBtn.innerHTML = '🎤 음성 질문';
+        voiceBtn.disabled = false;
     };
 });
 

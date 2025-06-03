@@ -44,25 +44,33 @@ body {
 .logo-container {
     text-align: center;
     margin-bottom: 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
 }
-
 
 .logo-container h1 {
     font-size: 2.5rem;
     font-weight: 700;
     color: var(--primary-color);
     margin-bottom: 8px;
-}
-
-#main-screen .logo-container {
-    text-align: left;
-    padding-left: 8px; 
+    cursor: pointer;
+    text-align: center;
 }
 
 .subtitle {
     font-size: 1.1rem;
     color: var(--text-color);
     opacity: 0.8;
+    text-align: center;
+}
+
+#main-screen .logo-container {
+    text-align: center;
+    align-items: center;
+    padding-left: 0;
 }
 
 /* 초기 설정 화면 */
@@ -163,10 +171,13 @@ button:hover {
 .category-tabs {
     display: flex;
     gap: 12px;
-    margin: 20px 0;
+    margin: 20px auto;
     overflow-x: auto;
     padding-bottom: 12px;
     scrollbar-width: none;
+    justify-content: center;
+    flex-wrap: wrap;
+    max-width: 100%;
 }
 
 .category-tabs::-webkit-scrollbar {
@@ -181,6 +192,7 @@ button:hover {
     white-space: nowrap;
     font-size: 0.9rem;
     font-weight: 500;
+    flex-shrink: 0;
 }
 
 .category-btn.active {
@@ -415,23 +427,41 @@ input:checked + .slider:before {
   }
 }
 
-    .header-content {
-        flex-direction: column;
-        gap: 16px;
-        text-align: center;
-    }
-    
-    .detail-content {
-        grid-template-columns: 1fr;
-    }
-    
-    .interest-tags {
-        grid-template-columns: repeat(2, 1fr);
-    }
-    
-    #news-container {
-        grid-template-columns: 1fr;
-    }
-} 
+.header-content {
+    flex-direction: column;
+    gap: 16px;
+    text-align: center;
+}
+
+.detail-content {
+    grid-template-columns: 1fr;
+}
+
+.interest-tags {
+    grid-template-columns: repeat(2, 1fr);
+}
+
+#news-container {
+    grid-template-columns: 1fr;
+}
 
 
+#voice-chat {
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+#voice-chat.listening {
+    background-color: #ff4444;
+    color: white;
+}
+
+#tts-btn {
+    transition: all 0.3s ease;
+}
+
+#tts-btn.loading {
+    background-color: #718096;
+    cursor: not-allowed;
+    opacity: 0.8;
+}
