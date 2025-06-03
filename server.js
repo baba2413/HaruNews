@@ -112,7 +112,7 @@ app.post('/api/gpt', async (req, res) => {
 
         let prompt = '';
         if (type === 'summarize') {
-            prompt = `다음 뉴스 기사를 한국어로 요약해줘:\n\n${text}`;
+            prompt = `다음 뉴스 기사에 대한 한국어 큐레이션을 작성해 주세요. 이것은 기사에 친숙하지 않은 사람들을 위한 것임을 고려해서 작성해주세요.:\n\n${text}`;
         } else if (type === 'qa' && question) {
             // prompt = `뉴스 기사 내용:\n\n${text}\n\n위 기사 내용을 바탕으로 다음 질문에 답변해줘:\n\n질문: ${question}\n\n답변:`;
             prompt = `요청의 내용이 질문 형식이라면 질문에 대답한다.\n요청의 내용이 단어 형태라면 단어에 대한 개념을 설명한다.\n모두 아니라면 요령껏 대답한다.\n\n요청: ${question}`;
