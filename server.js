@@ -139,6 +139,7 @@ app.post('/api/gpt', async (req, res) => {
     }
 });
 
+
 // GOOGLE MAP API 엔드포인트
 app.get('/api/geocode', async (req, res) => {
     const { lat, lng } = req.query;
@@ -209,6 +210,30 @@ app.post('/api/tts', async (req, res) => {
 
 
 
+
+// GPT 음성질문 응답
+app.post('/api/ask-gpt', async (req, res) => {
+    const { prompt } = req.body;
+
+    if (!prompt) {
+        return res.status(400).json({ error: '프롬프트가 없습니다.' });
+    }
+
+    try {
+        const completion = await openai.chat.completions.create({
+            model: "gpt-3.5-turbo",
+            messages: [{ role: "user", content: prompt }],
+        });
+
+        res.json({ answer: completion.choices[0].message.content });
+    } catch (error) {
+        console.error("GPT API 호출 실패:", error);
+        res.status(500).json({ error: "GPT 응답 실패" });
+    }
+});
+
+
 app.listen(port, () => {
     console.log(`Server running at http://localhost:${port}`);
-}); 
+});
+

@@ -523,6 +523,50 @@ async function askGPT(type, question, text) { // type, question, text 인자 추
         throw error; // 에러를 다시 던져서 handleGPT에서 잡도록 함
     }
 }
+//음성질문
+const voiceBtn = document.getElementById("voice-chat");
+
+voiceBtn.addEventListener("click", () => {
+    const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+    recognition.lang = 'ko-KR';
+    recognition.interimResults = false;
+
+    recognition.start();
+
+    recognition.onresult = async (event) => {
+        const voiceQuestion = event.results[0][0].transcript;
+        console.log("음성 질문:", voiceQuestion);
+
+        const summary = document.querySelector('.summary-content')?.innerText;
+        if (!summary) {
+            alert("요약된 뉴스가 없습니다.");
+            return;
+        }
+
+        const fullPrompt = `다음은 뉴스 요약입니다:\n${summary}\n\n사용자의 질문:\n${voiceQuestion}\n\n이 뉴스 내용을 바탕으로 질문에 답변해 주세요.`;
+
+        const response = await fetch('/api/ask-gpt', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ prompt: fullPrompt })
+        });
+
+        const data = await response.json();
+        displayGPTAnswer(data.answer);
+    };
+
+    recognition.onerror = (event) => {
+        console.error("음성 인식 오류:", event.error);
+        alert("음성 인식에 실패했습니다.");
+    };
+});
+
+function displayGPTAnswer(answer) {
+    const sidebar = document.getElementById("sidebar");
+    sidebar.classList.remove("hidden");
+    sidebar.innerHTML = `<p><strong>GPT 응답:</strong></p><div>${answer}</div>`;
+}
+
 
 
 // 사이드바 표시
