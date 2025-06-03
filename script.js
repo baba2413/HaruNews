@@ -5,7 +5,8 @@ const state = {
         interests: []
     },
     currentCategory: 'all',
-    currentNews: null
+    currentNews: null,
+    currentAudio: null  // 현재 재생 중인 오디오 객체 저장
 };
 
 // DOM 요소
@@ -81,7 +82,8 @@ function handleStart() {
             society: '사회',
             sports: '스포츠',
             entertainment: '연예',
-            tech: 'IT/과학'
+            tech: 'IT/과학',
+            location: '위치기반'
         };
         return labels[interest];
     }).join(', ');
@@ -102,6 +104,7 @@ async function handleCategoryChange(category) {
     elements.categoryBtns.forEach(btn => {
         btn.classList.toggle('active', btn.dataset.category === category);
     });
+
     if (category === 'recommend') {
         try {
             const news = await fetchNews('all');
@@ -124,6 +127,11 @@ async function handleCategoryChange(category) {
             console.error('추천 뉴스 로드 실패:', error);
             alert('추천 뉴스를 불러오는데 실패했습니다. 잠시 후 다시 시도해주세요.');
         }
+
+
+      if (category === 'location') {
+        loadLocationNews(); // 위치기반 로직 분리
+
     } else {
         loadNews();
     }
@@ -339,6 +347,8 @@ async function showNewsDetail(news) {
             try {
                 // GPT API로 본문 요약 요청
                 const summary = await askGPT('summarize', null, result.content);
+
+                state.currentNews.summary = summary;
                 
                 // 요약 결과 표시
                 newsBody.innerHTML = `
@@ -389,15 +399,136 @@ async function showNewsDetail(news) {
     }
 }
 
-// TTS 처리
-function handleTTS() {
-    if (!state.currentNews) return;
-    
-    const text = state.currentNews.content;
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = 'ko-KR';
-    speechSynthesis.speak(utterance);
+
+async function getCityNameFromCoords(lat, lng) {
+    try {
+        const response = await fetch(`/api/geocode?lat=${lat}&lng=${lng}`);
+        const data = await response.json();
+
+        if (data.success && data.address) {
+            return data.address.split(' ').find(part => part.endsWith('시') || part.endsWith('군')) || data.address;
+
+        } else {
+            return null;
+        }
+    } catch (error) {
+        console.error('주소 변환 실패:', error);
+        return null;
+    }
 }
+
+
+function getCurrentCoordinates() {
+    return new Promise((resolve, reject) => {
+        if (!navigator.geolocation) {
+            reject(new Error('위치정보를 지원하지 않습니다.'));
+        } else {
+            navigator.geolocation.getCurrentPosition(
+                pos => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+                err => reject(err)
+            );
+        }
+    });
+}
+
+
+async function loadLocationNews() {
+    try {
+        const coords = await getCurrentCoordinates(); // GPS
+        const city = await getCityNameFromCoords(coords.lat, coords.lng); // 주소 변환
+        console.log(`city:${city}\n`)
+        if (!city) throw new Error('도시명 추출 실패');
+
+        const news = await fetchNews(city); // 기존 함수 사용
+        displayNews(news);
+    } catch (err) {
+        console.error('위치기반 뉴스 실패:', err);
+        alert('위치 기반 뉴스를 불러오는 데 실패했습니다.');
+    }
+}
+
+
+function getBrightnessByTime() {
+    const hour = new Date().getHours();
+    return (hour >= 6 && hour < 18) ? 'light' : 'dark';
+}
+
+
+// TTS 처리
+async function handleTTS() {
+    if (!state.currentNews) return;
+
+    // 이미 재생 중인 오디오가 있다면 중지
+    if (state.currentAudio) {
+        state.currentAudio.pause();
+        state.currentAudio = null;
+        elements.ttsBtn.textContent = '🔊 TTS';  // 버튼 텍스트 원래대로
+        return;
+    }
+
+    const brightness = getBrightnessByTime();
+    const text = state.currentNews.summary || state.currentNews.description;
+
+    if (!text) {
+        alert('읽을 텍스트가 없습니다.');
+        return;
+    }
+
+    try {
+        const response = await fetch('http://localhost:3000/api/tts', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text, brightness })
+        });
+
+        const data = await response.json();
+
+        console.log('[🔊 TTS 응답]', data);
+
+        if (!data.success) {
+            throw new Error(data.error || 'TTS 처리 실패');
+        }
+
+        if (!data.audioContent || typeof data.audioContent !== 'string') {
+            throw new Error('audioContent 형식이 잘못되었거나 비어있음');
+        }
+
+        // Base64 → Audio 객체 재생
+        const audioSrc = `data:audio/mp3;base64,${data.audioContent}`;
+        const audio = new Audio(audioSrc);
+        
+        // 오디오 재생이 끝나면 상태 초기화
+        audio.onended = () => {
+            state.currentAudio = null;
+            elements.ttsBtn.textContent = '🔊 TTS';
+        };
+
+        // 오디오 재생 중 에러 발생 시 상태 초기화
+        audio.onerror = () => {
+            state.currentAudio = null;
+            elements.ttsBtn.textContent = '🔊 TTS';
+            alert('음성 재생에 실패했습니다.');
+        };
+
+        state.currentAudio = audio;  // 현재 재생 중인 오디오 저장
+        elements.ttsBtn.textContent = '⏹️ 중지';  // 버튼 텍스트 변경
+        audio.play().catch(err => {
+            console.error('오디오 재생 오류:', err);
+            alert('음성 재생에 실패했습니다.');
+            state.currentAudio = null;
+            elements.ttsBtn.textContent = '🔊 TTS';
+        });
+
+    } catch (error) {
+        console.error('TTS 처리 중 오류:', error);
+        alert('음성을 생성하는 데 실패했습니다.');
+        state.currentAudio = null;
+        elements.ttsBtn.textContent = '🔊 TTS';
+    }
+}
+
+
+
 
 // GPT 질문 처리
 async function handleGPT() {
@@ -452,6 +583,51 @@ async function askGPT(type, question, text) { // type, question, text 인자 추
         throw error; // 에러를 다시 던져서 handleGPT에서 잡도록 함
     }
 }
+//음성질문
+const voiceBtn = document.getElementById("voice-chat");
+
+voiceBtn.addEventListener("click", () => {
+    const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+    recognition.lang = 'ko-KR';
+    recognition.interimResults = false;
+
+    recognition.start();
+
+    recognition.onresult = async (event) => {
+        const voiceQuestion = event.results[0][0].transcript;
+        console.log("음성 질문:", voiceQuestion);
+
+        const summary = document.querySelector('.summary-content')?.innerText;
+        if (!summary) {
+            alert("요약된 뉴스가 없습니다.");
+            return;
+        }
+
+        const fullPrompt = `다음은 뉴스 요약입니다:\n${summary}\n\n사용자의 질문:\n${voiceQuestion}\n\n이 뉴스 내용을 바탕으로 질문에 답변해 주세요.`;
+
+        const response = await fetch('/api/ask-gpt', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ prompt: fullPrompt })
+        });
+
+        const data = await response.json();
+        displayGPTAnswer(data.answer);
+    };
+
+    recognition.onerror = (event) => {
+        console.error("음성 인식 오류:", event.error);
+        alert("음성 인식에 실패했습니다.");
+    };
+});
+
+function displayGPTAnswer(answer) {
+    const sidebar = document.getElementById("sidebar");
+    sidebar.classList.remove("hidden");
+    sidebar.innerHTML = `<p><strong>GPT 응답:</strong></p><div>${answer}</div>`;
+}
+
+
 
 // 헤드라인 텍스트 cleaning
 function makeWordSet(text) {
