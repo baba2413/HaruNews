@@ -344,6 +344,7 @@ input:checked + .slider:before {
 /* 반응형 디자인1 */
 
 @media (max-width: 768px) {
+
   .logo-container {
     text-align: center;
     padding-left: 0;
@@ -413,3 +414,24 @@ input:checked + .slider:before {
     transform: scale(0.95);
   }
 }
+
+    .header-content {
+        flex-direction: column;
+        gap: 16px;
+        text-align: center;
+    }
+    
+    .detail-content {
+        grid-template-columns: 1fr;
+    }
+    
+    .interest-tags {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    #news-container {
+        grid-template-columns: 1fr;
+    }
+} 
+
+
