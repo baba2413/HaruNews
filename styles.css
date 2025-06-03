@@ -200,6 +200,64 @@ button:hover {
     color: white;
 }
 
+/* 추천과 위치기반 버튼 스타일 */
+.category-btn[data-category="recommend"] {
+    background-color: #FFB6C1;
+    color: #4A4A4A;
+}
+
+.category-btn[data-category="location"] {
+    background-color: #bcf2bc;
+    color: #4A4A4A;
+}
+
+.category-btn[data-category="recommend"]:hover {
+    background-color: #ed74db;
+}
+
+.category-btn[data-category="location"]:hover {
+    background-color: #14e414;
+}
+
+.category-btn[data-category="recommend"].active {
+    background-color: #ed74db;
+    color: white;
+}
+
+.category-btn[data-category="location"].active {
+    background-color: #14e414;
+    color: white;
+}
+
+/* 다크모드에서의 스타일 */
+body.dark-mode .category-btn[data-category="recommend"] {
+    background-color: #FF69B4;
+    color: #E2E8F0;
+}
+
+body.dark-mode .category-btn[data-category="location"] {
+    background-color: #209620;
+    color: #E2E8F0;
+}
+
+body.dark-mode .category-btn[data-category="recommend"]:hover {
+    background-color: #FF1493;
+}
+
+body.dark-mode .category-btn[data-category="location"]:hover {
+    background-color: #32CD32;
+}
+
+body.dark-mode .category-btn[data-category="recommend"].active {
+    background-color: #FF1493;
+    color: white;
+}
+
+body.dark-mode .category-btn[data-category="location"].active {
+    background-color: #32CD32;
+    color: white;
+}
+
 #news-container {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
@@ -464,4 +522,19 @@ input:checked + .slider:before {
     background-color: #718096;
     cursor: not-allowed;
     opacity: 0.8;
+}
+
+/* 로딩 메시지 스타일 */
+.loading-message {
+    text-align: center;
+    padding: 20px;
+    color: var(--text-color);
+    font-size: 1.1em;
+}
+
+.error-message {
+    text-align: center;
+    padding: 20px;
+    color: #e53e3e;
+    font-size: 1.1em;
 }

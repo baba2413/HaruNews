@@ -89,16 +89,18 @@ function setupEventListeners() {
 // 시작하기 처리
 function handleStart() {
     const ageGroup = elements.ageGroup.value;
-    const interests = Array.from(elements.interestCheckboxes)
-        .filter(cb => cb.checked)
-        .map(cb => cb.value);
+    const selectedInterest = document.querySelector('input[name="interest"]:checked');
 
-    if (interests.length === 0) {
-        alert('최소 하나 이상의 관심사를 선택해주세요.');
+    if (!selectedInterest) {
+        alert('관심사를 선택해주세요.');
         return;
     }
 
-    state.userPreferences = { ageGroup, interests };
+    state.userPreferences = { 
+        ageGroup, 
+        interests: [selectedInterest.value] 
+    };
+    
     elements.setupScreen.classList.add('hidden');
     elements.mainScreen.classList.remove('hidden');
     
@@ -119,15 +121,9 @@ function handleStart() {
     //     };
     //     return labels[interest];
     // }).join(', ');
-    
-    // 선택된 관심사 중 첫 번째를 기본 카테고리로 설정 및 로드
-    if (interests.length > 0) {
-        const initialCategory = interests[0];
-        handleCategoryChange(initialCategory);
-    } else {
-        // 관심사가 선택되지 않은 경우 기본 카테고리(전체) 로드
-        handleCategoryChange('all');
-    }
+
+    // 선택된 관심사를 기본 카테고리로 설정 및 로드
+    handleCategoryChange(selectedInterest.value);
 }
 
 // 카테고리 변경 처리
@@ -355,8 +351,7 @@ async function showNewsDetail(news) {
                 ${news.publisher}
             </p>
             <div class="news-body">
-                
-                <div class="loading">본문을 불러오는 중...</div>
+                <div class="loading-message">본문을 불러오는 중...</div>
             </div>
         `;
 
@@ -370,7 +365,7 @@ async function showNewsDetail(news) {
             // <div class="full-content">${result.content}</div>
 
             // 요약을 불러오는 중 로딩 메시지 표시
-            newsBody.innerHTML = '<div class="loading">본문 요약을 불러오는 중...</div>';
+            newsBody.innerHTML = '<div class="loading-message">본문 요약을 불러오는 중...</div>';
 
             try {
                 // GPT API로 본문 요약 요청
@@ -465,6 +460,9 @@ function getCurrentCoordinates() {
 
 async function loadLocationNews() {
     try {
+        // 로딩 상태 표시
+        elements.newsContainer.innerHTML = '<div class="loading-message">위치 기반 뉴스를 불러오는 중...</div>';
+        
         const coords = await getCurrentCoordinates(); // GPS
         const city = await getCityNameFromCoords(coords.lat, coords.lng); // 주소 변환
         console.log(`city:${city}\n`)
@@ -474,7 +472,7 @@ async function loadLocationNews() {
         displayNews(news);
     } catch (err) {
         console.error('위치기반 뉴스 실패:', err);
-        alert('위치 기반 뉴스를 불러오는 데 실패했습니다.');
+        elements.newsContainer.innerHTML = '<div class="error-message">위치 기반 뉴스를 불러오는 데 실패했습니다.</div>';
     }
 }
 
