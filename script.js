@@ -5,7 +5,8 @@ const state = {
         interests: []
     },
     currentCategory: 'all',
-    currentNews: null
+    currentNews: null,
+    currentAudio: null  // 현재 재생 중인 오디오 객체 저장
 };
 
 // DOM 요소
@@ -375,6 +376,7 @@ async function loadLocationNews() {
     try {
         const coords = await getCurrentCoordinates(); // GPS
         const city = await getCityNameFromCoords(coords.lat, coords.lng); // 주소 변환
+        console.log(`city:${city}\n`)
         if (!city) throw new Error('도시명 추출 실패');
 
         const news = await fetchNews(city); // 기존 함수 사용
@@ -395,6 +397,14 @@ function getBrightnessByTime() {
 // TTS 처리
 async function handleTTS() {
     if (!state.currentNews) return;
+
+    // 이미 재생 중인 오디오가 있다면 중지
+    if (state.currentAudio) {
+        state.currentAudio.pause();
+        state.currentAudio = null;
+        elements.ttsBtn.textContent = '🔊 TTS';  // 버튼 텍스트 원래대로
+        return;
+    }
 
     const brightness = getBrightnessByTime();
     const text = state.currentNews.summary || state.currentNews.description;
@@ -426,14 +436,34 @@ async function handleTTS() {
         // Base64 → Audio 객체 재생
         const audioSrc = `data:audio/mp3;base64,${data.audioContent}`;
         const audio = new Audio(audioSrc);
+        
+        // 오디오 재생이 끝나면 상태 초기화
+        audio.onended = () => {
+            state.currentAudio = null;
+            elements.ttsBtn.textContent = '🔊 TTS';
+        };
+
+        // 오디오 재생 중 에러 발생 시 상태 초기화
+        audio.onerror = () => {
+            state.currentAudio = null;
+            elements.ttsBtn.textContent = '🔊 TTS';
+            alert('음성 재생에 실패했습니다.');
+        };
+
+        state.currentAudio = audio;  // 현재 재생 중인 오디오 저장
+        elements.ttsBtn.textContent = '⏹️ 중지';  // 버튼 텍스트 변경
         audio.play().catch(err => {
             console.error('오디오 재생 오류:', err);
             alert('음성 재생에 실패했습니다.');
+            state.currentAudio = null;
+            elements.ttsBtn.textContent = '🔊 TTS';
         });
 
     } catch (error) {
         console.error('TTS 처리 중 오류:', error);
         alert('음성을 생성하는 데 실패했습니다.');
+        state.currentAudio = null;
+        elements.ttsBtn.textContent = '🔊 TTS';
     }
 }
 

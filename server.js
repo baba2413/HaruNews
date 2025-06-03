@@ -189,7 +189,7 @@ app.post('/api/tts', async (req, res) => {
         },
         audioConfig: {
             audioEncoding: 'MP3',
-            speakingRate: brightness === 'dark' ? 1.3 : 1.1
+            speakingRate: brightness === 'dark' ? 0.9 : 1.1
         },
     };
 
