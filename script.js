@@ -30,7 +30,8 @@ const elements = {
 
 // 네이버 뉴스 API 관련 상수
 const NAVER_NEWS_API = {
-    BASE_URL: 'http://localhost:3000/api/news', // 서버 API 엔드포인트로 변경
+    // BASE_URL: '/api/news', // 상대 경로로 변경
+    BASE_URL: window.location.origin + '/api/news', // 동적 URL 사용
     DISPLAY_COUNT: 20 // 뉴스 갯수 (변경가능)
 };
 
@@ -356,7 +357,7 @@ async function showNewsDetail(news) {
         `;
 
         // 본문 내용 가져오기
-        const response = await fetch(`http://localhost:3000/api/news/content?url=${encodeURIComponent(news.link)}`);
+        const response = await fetch(`/api/news/content?url=${encodeURIComponent(news.link)}`);
         const result = await response.json();
 
         if (result.success) {
@@ -510,7 +511,7 @@ async function handleTTS() {
         elements.ttsBtn.classList.add('loading');
         elements.ttsBtn.disabled = true;
 
-        const response = await fetch('http://localhost:3000/api/tts', {
+        const response = await fetch('/api/tts', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ text, brightness })
@@ -599,7 +600,7 @@ async function handleGPT() {
 // GPT API 호출
 async function askGPT(type, question, text) { // type, question, text 인자 추가
     try {
-        const response = await fetch('http://localhost:3000/api/gpt', {
+        const response = await fetch('/api/gpt', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'

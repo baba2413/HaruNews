@@ -54,3 +54,13 @@
 # 추가된 사항
 - gps기반으로 좌료를 지역이름으로 변환. 지역이름에서 시나 구가 들어간 부분을 추출해서 검색어에 포함
 - 6시에서 18시 사이에는 또렷하게 빠른 속도로 읽음. 나머지 시간대에서는 차분하게 천천히 읽음.
+
+# 주의
+- 모바일 사용 시 TTS와 위치인식은 https에서 작동합니다.
+    1. npm install -g ngrok
+    2. ngrok 사이트 회원가입
+    3. ngrok config add-authtoken YOUR_AUTH_TOKEN
+    4. ngrok http 300
+    5. npm start
+- 이것으로 https ngrok URL에 접속할 수 있습니다.
+- TTS, 음성인식은 안드로이드 환경에서 더 원활합니다.
